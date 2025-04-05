@@ -1,0 +1,78 @@
+#game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+}
+
+#board {
+    width: 600px;
+    height: 600px;
+    background: #f0f0f0;
+    position: relative;
+    border: 2px solid #333;
+}
+
+.home {
+    width: 200px;
+    height: 200px;
+    position: absolute;
+}
+
+.red-home { 
+    background: #ffdddd;
+    top: 0;
+    left: 0;
+}
+
+.blue-home {
+    background: #ddddff;
+    top: 0;
+    right: 0;
+}
+
+.green-home {
+    background: #ddffdd;
+    bottom: 0;
+    right: 0;
+}
+
+.yellow-home {
+    background: #ffffdd;
+    bottom: 0;
+    left: 0;
+}
+
+#center-path {
+    width: 200px;
+    height: 200px;
+    position: absolute;
+    top: 200px;
+    left: 200px;
+    background: #fff;
+    border: 2px solid #333;
+}
+
+.piece {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    position: absolute;
+    cursor: pointer;
+}
+
+#gameCanvas {
+    border: 2px solid #333;
+    background: #fff;
+}
+
+#controls {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+}
+
+button {
+    padding: 8px 16px;
+    cursor: pointer;
+}

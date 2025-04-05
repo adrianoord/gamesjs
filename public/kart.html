@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Kart Game</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        #canvas {
+            border: 1px solid black;
+            background-color: #f0f0f0;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            image-rendering: -moz-crisp-edges;
+            width: 500px;
+            height: 666px;
+            display: none; /* Hidden initially */
+        }
+
+        .hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            display: none; /* Hidden initially */
+        }
+
+        .player-info {
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .player-info h2 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        #lobby-screen {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #color-selection {
+            display: none;
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .room-list {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+        }
+
+        .room-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+
+        .room-item:hover {
+            background-color: #f9f9f9;
+        }
+
+        input, button {
+            padding: 10px;
+            margin: 10px 0;
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .color-option {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            margin: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid transparent;
+        }
+
+        .color-option:hover {
+            transform: scale(1.1);
+        }
+
+        .color-option.selected {
+            border: 3px solid black;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        #game-screen {
+            display: none;
+        }
+
+        #restart-button, #start-game-button {
+            margin-top: 10px;
+            background-color: #f44336;
+            display: none;
+        }
+
+        #start-game-button {
+            background-color: #2196F3;
+        }
+    </style>
+    <script src="socket.io/socket.io.js"></script>
+</head>
+<body>
+    <h1>Kart Game</h1>
+    
+    <!-- Lobby Screen -->
+    <div id="lobby-screen">
+        <h2>Game Lobby</h2>
+        <div>
+            <input type="text" id="room-id" placeholder="Entre com o nome da sala">
+            <input type="text" id="room-init-life" placeholder="Entre com a quantidade de vidas" value="3">
+            <button id="create-room">Criar Sala</button>
+        </div>
+        <h3>Salas disponíveis</h3>
+        <div class="room-list" id="room-list">
+            <p id="no-rooms-message">Nenhuma sala disponível</p>
+        </div>
+    </div>
+
+    <!-- Color Selection Screen -->
+    <div id="color-selection">
+        <h2>Selecione uma cor</h2>
+        <p>Sala: <span id="selected-room"></span></p>
+        <div id="color-options">
+            <div class="color-option" style="background-color: red;" data-color="red"></div>
+            <div class="color-option" style="background-color: blue;" data-color="blue"></div>
+            <div class="color-option" style="background-color: green;" data-color="green"></div>
+            <div class="color-option" style="background-color: yellow;" data-color="yellow"></div>
+        </div>
+        <button id="join-room" disabled>Entrar no jogo</button>
+        <button id="back-to-lobby">Voltar para o Lobby</button>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-screen" class="game-container">
+        <div class="hud">
+            <div class="player-info" id="player-info">
+                <p>Life: <span id="player-life">0</span></p>
+            </div>
+        </div>
+        <canvas id="canvas" width="15" height="10"></canvas>
+        <button id="start-game-button">Start</button>
+        <button id="restart-button">Restart</button>
+        <button id="leave-game">Sair da sala</button>
+    </div>
+
+    <script type="text/javascript">
+        const socket = io(window.location.origin, { transports: ['websocket'] });
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        const audio_countdown = new Audio('assets/countdown.mp3');
+        const audio_gameover = new Audio('assets/gameover.mp3');
+        //const audio_car_crash = new Audio('assets/carcrash.mp3');
+        const audio_car_engine = new Audio('assets/carengine.mp3');
+
+        const player_life = document.getElementById('player-life');
+
+        // Screen elements
+        const lobbyScreen = document.getElementById('lobby-screen');
+        const colorSelection = document.getElementById('color-selection');
+        const gameScreen = document.getElementById('game-screen');
+        const roomListContainer = document.getElementById('room-list');
+        const noRoomsMessage = document.getElementById('no-rooms-message');
+        const selectedRoomElement = document.getElementById('selected-room');
+        const joinRoomButton = document.getElementById('join-room');
+        const backToLobbyButton = document.getElementById('back-to-lobby');
+        const leaveGameButton = document.getElementById('leave-game');
+        
+        //Lobby screen elements
+        const roomIdInput = document.getElementById('room-id');
+        const roomInitLifeInput = document.getElementById('room-init-life');
+        const createRoomButton = document.getElementById('create-room');
+        
+        const colorOptions = document.querySelectorAll('.color-option');
+        const hud = document.querySelector('.hud');
+        const startGameButton = document.getElementById('start-game-button');
+        const restartButton = document.getElementById('restart-button');
+
+        let selectedRoom = '';
+        let selectedColor = '';
+        let currentPlayer = null;
+        let gameState = null;
+        let blink = false;
+        let gameStarted = false;
+        let gameover_audio_flag = false;
+
+        // Socket event listeners
+        socket.on('connect', () => {
+            console.log('Connected to server');
+            refreshRoomList();
+        });
+
+        socket.on('rooms', (roomsList) => {
+            updateRoomList(roomsList);
+        });
+
+        socket.on('roomCreated', (roomId) => {
+            selectedRoom = roomId;
+            showColorSelection(roomId);
+        });
+
+        socket.on('roomExists', (roomId) => {
+            alert(`Room "${roomId}" already exists. Please choose a different name.`);
+        });
+
+        socket.on('roomJoined', (roomId, player) => {
+            currentPlayer = player;
+            player_life.textContent = player.life;
+            showGameScreen();
+        });
+
+        socket.on('roomNotFound', (roomId) => {
+            alert(`Room "${roomId}" not found.`);
+            showLobbyScreen();
+        });
+
+        socket.on('roomFull', (roomId) => {
+            alert(`Room "${roomId}" is full.`);
+            showLobbyScreen();
+        });
+
+        socket.on('colorTaken', (color) => {
+            alert(`Color "${color}" is already taken. Please choose a different color.`);
+            enableAllColorOptions();
+        });
+
+        socket.on('gameState', (state) => {
+            gameState = state;
+            
+            // Check if game has started
+            if (state.gameStarted && !gameStarted) {
+                gameStarted = true;
+                startGameButton.style.display = 'none';
+            }
+            
+            // Check if all players are dead
+            let allPlayersDead = true;
+            state.players.forEach(player => {
+                if (player.life > 0) {
+                    allPlayersDead = false;
+                }
+                if (player.socketId === socket.id) {
+                    if (player.life <= 0 && !gameover_audio_flag) {
+                        audio_car_engine.pause();
+                        audio_car_engine.currentTime = 0; // Reset the audio to the beginning
+                        audio_gameover.play();
+                        gameover_audio_flag = true;
+                    } else if (player.life > 0) {
+                        gameover_audio_flag = false;
+                    }
+                }
+            });
+            
+            if (allPlayersDead && state.players.length > 0) {
+                restartButton.style.display = 'block';
+            } else {
+                restartButton.style.display = 'none';
+            }
+            setTimeout(() => socket.emit('getGameState'), 1000 / 60); // Request game state every frame
+        });
+
+        socket.on('gameStarted', () => {
+            gameStarted = true;
+            audio_countdown.play();
+            setTimeout(() => {
+                socket.emit('changeGameState', { gameStarted: true });
+                // audio_car_engine.loop = true;
+                // audio_car_engine.play();
+            }, audio_countdown.duration * 1000);
+            socket.emit('getGameState')
+        });
+
+        socket.on('gameRestarted', () => {
+            audio_countdown.play();
+            setTimeout(() => {
+                socket.emit('changeGameState', { gameStarted: true });
+            }, audio_countdown.duration * 1000);
+        });
+
+        // UI event listeners
+        createRoomButton.addEventListener('click', () => {
+            const roomId = roomIdInput.value.trim();
+            if (!roomId) {
+                alert('Por favor, insira um nome para a sala');
+                return;
+            }
+            const roomInitLife = parseInt(roomInitLifeInput.value.trim());
+            if (isNaN(roomInitLife) || roomInitLife <= 0) {
+                alert('Por favor, insira um número válido para a quantidade de vidas');
+                return;
+            }
+            socket.emit('createRoom', roomId, roomInitLife);
+        });
+
+        colorOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                colorOptions.forEach(opt => opt.classList.remove('selected'));
+                option.classList.add('selected');
+                selectedColor = option.dataset.color;
+                joinRoomButton.disabled = false;
+            });
+        });
+
+        joinRoomButton.addEventListener('click', () => {
+            if (selectedRoom && selectedColor) {
+                socket.emit('joinRoom', selectedRoom, selectedColor);
+            }
+        });
+
+        backToLobbyButton.addEventListener('click', () => {
+            showLobbyScreen();
+        });
+
+        leaveGameButton.addEventListener('click', () => {
+            showLobbyScreen();
+            audio_car_engine.pause();
+            audio_countdown.pause();
+            audio_gameover.pause();
+            socket.emit('leaveRoom', selectedRoom);
+        });
+
+        startGameButton.addEventListener('click', () => {
+            startGameButton.style.display = 'none';
+            socket.emit('startGame');
+        });
+
+        restartButton.addEventListener('click', () => {
+            restartButton.style.display = 'none';
+            socket.emit('restartGame');
+        });
+
+        // Helper functions
+        function refreshRoomList() {
+            socket.emit('rooms');
+        }
+
+        function updateRoomList(rooms) {
+            if (rooms.length === 0) {
+                noRoomsMessage.style.display = 'block';
+                return;
+            }
+
+            noRoomsMessage.style.display = 'none';
+            roomListContainer.innerHTML = '';
+            
+            rooms.forEach(roomId => {
+                const roomElement = document.createElement('div');
+                roomElement.className = 'room-item';
+                roomElement.textContent = roomId;
+                roomElement.addEventListener('click', () => {
+                    selectedRoom = roomId;
+                    showColorSelection(roomId);
+                });
+                roomListContainer.appendChild(roomElement);
+            });
+        }
+
+        function showLobbyScreen() {
+            lobbyScreen.style.display = 'block';
+            colorSelection.style.display = 'none';
+            gameScreen.style.display = 'none';
+            canvas.style.display = 'none';
+            hud.style.display = 'none';
+            gameStarted = false;
+            refreshRoomList();
+        }
+
+        function showColorSelection(roomId) {
+            lobbyScreen.style.display = 'none';
+            colorSelection.style.display = 'block';
+            gameScreen.style.display = 'none';
+            selectedRoomElement.textContent = roomId;
+            enableAllColorOptions();
+        }
+
+        function showGameScreen() {
+            lobbyScreen.style.display = 'none';
+            colorSelection.style.display = 'none';
+            gameScreen.style.display = 'block';
+            canvas.style.display = 'block';
+            hud.style.display = 'block';
+            startGameButton.style.display = 'block';
+            restartButton.style.display = 'none';
+            gameStarted = false;
+        }
+
+        function enableAllColorOptions() {
+            colorOptions.forEach(option => {
+                option.classList.remove('selected');
+                option.disabled = false;
+            });
+            joinRoomButton.disabled = true;
+            selectedColor = '';
+        }
+
+        setInterval(() => {
+            if (gameStarted) {
+                renderGame();
+            }
+        }, 1000 / 60); // 60 FPS
+
+        function renderGame() {
+            if (!gameState) return;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw players
+            gameState.players.forEach(player => {
+                // Update current player info
+                if (player.socketId === socket.id) {
+                        player_life.textContent = player.life;
+                    }
+                if (player.life > 0) {
+                    if (player.invulnerable) {
+                        blink ? ctx.fillStyle = 'white' : ctx.fillStyle = player.color;
+                        blink = !blink; // Toggle blink state
+                    } else {
+                        ctx.fillStyle = player.color;
+                    }
+                    ctx.fillRect(player.x, player.y, player.w, player.h);
+                }
+            });
+
+            // Draw traffic
+            gameState.traffic.forEach(traffic => {
+                ctx.fillStyle = 'black';
+                ctx.fillRect(traffic.x, traffic.y, traffic.w, traffic.h);
+            });
+        }
+
+        // Listen for keyboard input for the game
+        document.addEventListener('keydown', (event) => {
+            if (currentPlayer && gameState && gameState.gameStarted) {
+                if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+                    socket.emit('move', event.key);
+                }
+            }
+        });
+
+        // Start in the lobby
+        showLobbyScreen();
+
+        function getTime() {
+            //milliseconds
+            return (new Date()).getTime();
+        }
+    </script>
+</body>
+
+</html>

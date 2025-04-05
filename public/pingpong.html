@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Ping Pong</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        #canvas {
+            border: 1px solid black;
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <canvas id="canvas" width="500" height="500"></canvas>
+
+    <script type="text/javascript">
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        const ball = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            color: 'red',
+            w: 10,
+            h: 10,
+        }
+
+        const players = [
+            {
+                x: 0,
+                y: canvas.height / 2 - 50,
+                color: 'blue',
+                w: 10,
+                h: 150,
+                speed: 5,
+                position: 'left',
+            },
+            {
+                x: canvas.width - 10,
+                y: canvas.height / 2 - 50,
+                color: 'green',
+                w: 10,
+                h: 150,
+                speed: 5,
+                position: 'right',
+            },
+            {
+                x: canvas.width / 2 - 50,
+                y: 0,
+                color: 'yellow',
+                w: 150,
+                h: 10,
+                speed: 5,
+                position: 'top',
+            },
+            {
+                x: canvas.width / 2 - 50,
+                y: canvas.height - 10,
+                color: 'purple',
+                w: 150,
+                h: 10,
+                speed: 5,
+                position: 'bottom',
+            }
+        ]
+
+        const bonus_items = [
+            {
+                description: 'Speed Boost',
+                color: 'orange',
+                w: 20,
+                h: 20,
+                effect: function (player) {
+                    player.speed += 2;
+                    setTimeout(() => {
+                        player.speed -= 2;
+                    }, 5000);
+                }
+            },
+            {
+                description: 'Slow Down',
+                color: 'pink',
+                w: 20,
+                h: 20,
+                effect: function (player) {
+                    player.speed -= 2;
+                    setTimeout(() => {
+                        player.speed += 2;
+                    }, 5000);
+                }
+            },
+            {
+                description: 'Size Increase',
+                color: 'cyan',
+                w: 20,
+                h: 20,
+                effect: function (player) {
+                    const debuff = 50;
+                    const time_debuff = 5000;
+
+                    if (player.w > player.h) {
+                        if ((player.w + debuff) <= player.h) {
+                            return;
+                        }
+                        player.w -= debuff
+                    } else {
+                        if ((player.h + debuff) <= player.w) {
+                            return;
+                        }
+                        player.h -= debuff
+                    }
+                    setTimeout(() => {
+                        if (player.w > player.h) {
+                            player.w += debuff
+                        } else {
+                            player.h += debuff
+                        }
+                    }, time_debuff);
+                }
+            },
+            {
+                description: 'Size Decrease',
+                color: 'lime',
+                w: 20,
+                h: 20,
+                effect: function (player) {
+                    if ((player.w - 10) < 10 || (player.h - 10) < 10) {
+                        return;
+                    }
+
+                    if (player.w > player.h) {
+                        player.w -= 10
+                    } else {
+                        player.h -= 10
+                    }
+                    setTimeout(() => {
+                        if (player.w > player.h) {
+                            player.w += 10
+                        } else {
+                            player.h += 10
+                        }
+                    }, 5000);
+                }
+            }
+        ]
+
+        const ballSpeed = 10;
+
+        // Randomly ball direction de 0 to 360 degrees
+        const ballDirection = Math.floor(Math.random() * 360);
+
+        const game = {
+            players: players,
+            ball: ball,
+            ballSpeed: ballSpeed,
+            ballDirection: ballDirection,
+            rate_of_bonus: 0.1,
+            fps: 30,
+        }
+
+        render();
+
+        function render() {
+            // Move the ball
+            game.ball.x += Math.cos(game.ballDirection * Math.PI / 180) * game.ballSpeed;
+            game.ball.y += Math.sin(game.ballDirection * Math.PI / 180) * game.ballSpeed;
+
+            game.ball.x < 0 ? game.ball.x = 0 : game.ball.x;
+            game.ball.x + game.ball.w > canvas.width ? game.ball.x = canvas.width - game.ball.w : game.ball.x;
+            game.ball.y < 0 ? game.ball.y = 0 : game.ball.y;
+            game.ball.y + game.ball.h > canvas.height ? game.ball.y = canvas.height - game.ball.h : game.ball.y;
+
+            if (game.ball.x <= 0 || game.ball.x + game.ball.w >= canvas.width) {
+                game.ballDirection = (180 - game.ballDirection) % 360;
+            }
+
+            if (game.ball.y <= 0 || game.ball.y + game.ball.h >= canvas.height) {
+                game.ballDirection = (360 - game.ballDirection) % 360;
+            }
+
+            // Verifica a colisão com os jogadores e aplica mais ou menos angulo dependendo de onde a bola colidir, quanto mais perto do centro, menos angulo
+            game.players.forEach(player => {
+                if (game.ball.x < player.x + player.w &&
+                    game.ball.x + game.ball.w > player.x &&
+                    game.ball.y < player.y + player.h &&
+                    game.ball.y + game.ball.h > player.y) {
+
+                    if (game.ball.x >= player.x && player.position === 'left') {
+                        game.ballDirection = (180 - game.ballDirection) % 360;
+                    } else if (game.ball.x + game.ball.w <= player.x + player.w && player.position === 'right') {
+                        game.ballDirection = (180 - game.ballDirection) % 360;
+                    } else if (game.ball.y >= player.y && player.position === 'top') {
+                        game.ballDirection = (360 - game.ballDirection) % 360;
+                    } else if (game.ball.y + game.ball.h <= player.y + player.h && player.position === 'bottom') {
+                        game.ballDirection = (360 - game.ballDirection) % 360;
+                    }
+
+                    // Garante que a bola não fique presa no jogador
+                    if (game.ball.x < player.x) {
+                        game.ball.x = player.x - game.ball.w;
+                    } else if (game.ball.x + game.ball.w > player.x + player.w) {
+                        game.ball.x = player.x + player.w;
+                    }
+                    if (game.ball.y < player.y) {
+                        game.ball.y = player.y - game.ball.h;
+                    } else if (game.ball.y + game.ball.h > player.y + player.h) {
+                        game.ball.y = player.y + player.h;
+                    }
+
+                    const partitions = {
+                        "center": {
+                            min: 51,
+                            max: 100,
+                            angle: 0
+                        },
+                        "left": {
+                            min: 0,
+                            max: 50,
+                            angle: 25
+                        },
+                        "right": {
+                            min: 0,
+                            max: 50,
+                            angle: 25
+                        }
+                    }
+
+                    if (player.w > player.h) {
+                        switch (player.position) {
+                            case 'top':
+                                const hit_position
+                                    = game.ball.x <= player.x + player.w / 3 ? 'left' :
+                                    game.ball.x >= player.x + player.w * 2 / 3 ? 'right' : 'center';
+                                console.log(hit_position);
+                                if (game.ballDirection > 90 && game.ballDirection < 270) {
+                                    if (hit_position === 'left') {
+                                        game.ballDirection = Math.abs((partitions.left.angle - game.ballDirection) % 360);
+                                    } else if (hit_position === 'right') {
+                                        game.ballDirection = Math.abs((partitions.right.angle + game.ballDirection) % 360);
+                                    } else {
+                                        game.ballDirection = Math.abs((partitions.center.angle + game.ballDirection) % 360);
+                                    }
+                                } else {
+                                    if (hit_position === 'left') {
+                                        game.ballDirection = Math.abs((partitions.left.angle + game.ballDirection) % 360);
+                                    } else if (hit_position === 'right') {
+                                        game.ballDirection = Math.abs((partitions.right.angle - game.ballDirection) % 360);
+                                    } else {
+                                        game.ballDirection = Math.abs((partitions.center.angle - game.ballDirection) % 360);
+                                    }
+                                }
+                                break;
+                            case 'bottom':
+                                if (game.ballDirection > 90 && game.ballDirection < 270) {
+                                    game.ballDirection = (partitions.left.angle + game.ballDirection) % 360;
+                                } else {
+                                    game.ballDirection = (360 - partitions.right.angle + game.ballDirection) % 360;
+                                }
+                                break;
+                        }
+                    } else {
+                        if (game.ball.y < (player.y + player.h) / 3) {
+                            game.ballDirection = (partitions.left.angle + game.ballDirection) % 360;
+                        } else if (game.ball.y > (player.y + player.h) * 2 / 3) {
+                            game.ballDirection = (partitions.right.angle + game.ballDirection) % 360;
+                        } else {
+                            game.ballDirection = (partitions.center.angle + game.ballDirection) % 360;
+                        }
+                    }
+
+                }
+            });
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = game.ball.color;
+            ctx.fillRect(game.ball.x, game.ball.y, game.ball.w, game.ball.h);
+            game.players.forEach(player => {
+                ctx.fillStyle = player.color;
+                ctx.fillRect(player.x, player.y, player.w, player.h);
+            });
+
+            //control frame rate 30 fps
+            setTimeout(() => {
+                requestAnimationFrame(render);
+            }, 1000 / game.fps);
+        }
+    </script>
+</body>
+
+</html>
