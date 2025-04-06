@@ -2,6 +2,7 @@ export interface IPlayer {
     socketId: string; // socket id of the player
     life: number; // number of lives left
     invulnerable: boolean; // is the player invulnerable
+    in_cooldown: boolean; // cooldown time for the player
     x: number; // x position of the player
     y: number; // y position of the player
     w: number; // width of the player

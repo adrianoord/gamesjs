@@ -201,6 +201,8 @@
             <div class="color-option" style="background-color: blue;" data-color="blue"></div>
             <div class="color-option" style="background-color: green;" data-color="green"></div>
             <div class="color-option" style="background-color: yellow;" data-color="yellow"></div>
+            <div class="color-option" style="background-color: purple;" data-color="purple"></div>
+            <div class="color-option" style="background-color: orange;" data-color="orange"></div>    
         </div>
         <button id="join-room" disabled>Entrar no jogo</button>
         <button id="back-to-lobby">Voltar para o Lobby</button>
@@ -210,6 +212,7 @@
     <div id="game-screen" class="game-container">
         <div class="hud">
             <div class="players-list"></div>
+            <div class="player-skill">Empurrão Disponivel</div>
             <div class="player-info" id="player-info">
                 <p>Sua vida: <span id="player-life">0</span></p>
             </div>
@@ -265,6 +268,7 @@
         const audio_car_engine = new Audio('assets/carengine.mp3');
 
         const player_life = document.getElementById('player-life');
+        const player_skill = document.querySelector('.player-skill');
 
         // Screen elements
         const lobbyScreen = document.getElementById('lobby-screen');
@@ -387,6 +391,14 @@
                 gameStarted = true;
                 startGameButton.style.display = 'none';
             }
+
+            gameState.players.forEach(player => {
+                if (player.socketId === socket.id) {
+                    player_life.textContent = player.life;
+                    player_skill.textContent = player.in_cooldown ? 'Empurrão em cooldown' : 'Empurrão disponível';
+                    console.log("Cooldown:", player.in_cooldown);
+                }
+            });
 
             // Check if all players are dead
             let allPlayersDead = true;
@@ -581,10 +593,6 @@
 
             // Draw players
             gameState.players.forEach(player => {
-                // Update current player info
-                if (player.socketId === socket.id) {
-                    player_life.textContent = player.life;
-                }
                 if (player.life > 0) {
                     if (player.invulnerable) {
                         blink ? ctx.fillStyle = 'white' : ctx.fillStyle = player.color;
@@ -603,28 +611,46 @@
             });
         }
 
+        keyPressed = {};
+
         // Listen for keyboard input for the game
-        document.addEventListener('keydown', (event) => {
+        window.addEventListener('keydown', (event) => {
+            const key = event.code.toLowerCase();
+            keyPressed[key] = true; // Set the key as pressed
+
             if (currentPlayer && gameState && gameState.gameStarted) {
                 // Support for WASD and Arrow keys
-                if (['w', 'a', 's', 'd', 'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'].includes(event.key)) {
+                if (['keyw', 'keya', 'keys', 'keyd', 'arrowup', 'arrowleft', 'arrowdown', 'arrowright', 'space'].includes(key)) {
                     event.preventDefault(); // Prevent default scrolling behavior
                 }
+
+                // Detect actions
+                if (keyPressed['space'] && (keyPressed['arrowup'] || keyPressed['keyw'])) {
+                    return socket.emit('action', 'push_up');
+                } else if (keyPressed['space'] && (keyPressed['arrowdown'] || keyPressed['keys'])) {
+                    return socket.emit('action', 'push_down');
+                } else if (keyPressed['space'] && (keyPressed['arrowleft'] || keyPressed['keya'])) {
+                    return socket.emit('action', 'push_left');
+                } else if (keyPressed['space'] && (keyPressed['arrowright'] || keyPressed['keyd'])) {
+                    return socket.emit('action', 'push_right');
+                }
+
                 // Translate WASD to Arrow keys
-                if (event.key === 'w') {
-                    socket.emit('move', 'ArrowUp');
-                } else if (event.key === 'a') {
-                    socket.emit('move', 'ArrowLeft');
-                } else if (event.key === 's') {
-                    socket.emit('move', 'ArrowDown');
-                } else if (event.key === 'd') {
-                    socket.emit('move', 'ArrowRight');
-                } else {
-                    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
-                        socket.emit('move', event.key);
-                    }
+                if (['keyw', 'arrowup'].includes(key)) {
+                    return socket.emit('move', 'ArrowUp');
+                } else if (['keya', 'arrowleft'].includes(key)) {
+                    return socket.emit('move', 'ArrowLeft');
+                } else if (['keys', 'arrowdown'].includes(key)) {
+                    return socket.emit('move', 'ArrowDown');
+                } else if (['keyd', 'arrowright'].includes(key)) {
+                    return socket.emit('move', 'ArrowRight');
                 }
             }
+        });
+
+        window.addEventListener('keyup', (event) => {
+            const key = event.code.toLowerCase();
+            delete keyPressed[key];
         });
 
         // Volume control functionality

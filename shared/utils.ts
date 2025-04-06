@@ -34,6 +34,6 @@ export function isValidRoomId(roomId: string): boolean {
 
 // Helper function to validate color
 export function isValidColor(color: string): boolean {
-    const validColors = ['red', 'blue', 'green', 'yellow'];
+    const validColors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange'];
     return validColors.includes(color);
 }

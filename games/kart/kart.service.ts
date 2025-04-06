@@ -1,6 +1,7 @@
 import { Server, Socket } from "socket.io";
 import { GameKart } from "./kart.rules";
 import { checkRateLimit, isValidRoomId, isValidColor } from "../../shared/utils"; // Import the rate limit function
+import { IPlayer } from "../../models";
 
 export class KartService {
     path_socket: string;
@@ -98,11 +99,11 @@ export class KartService {
                     return;
                 }
 
-                const player = {
+                const player: IPlayer = {
                     socketId: socket.id,
                     life: room.players_init_life,
                     invulnerable: false,
-                    blink: false,
+                    in_cooldown: false,
                     x: Math.floor(Math.random() * (room.canvas.width - 1)),
                     y: 5,
                     w: 1,
@@ -129,22 +130,124 @@ export class KartService {
             const room = this.rooms.find(room => room.players.some(player => player.socketId === socket.id));
             if (room) {
                 socket.compress(true).emit('gameState', {
-                    players: room.players.map(player => {
-                        return {
-                            life: player.life,
-                            invulnerable: player.invulnerable,
-                            x: player.x,
-                            y: player.y,
-                            w: player.w,
-                            h: player.h,
-                            color: player.color
-                        };
-                    }),
+                    players: room.players,
                     traffic: room.traffic,
                     gameStarted: room.gameStarted
                 }); // Send the game state to the client
             } else {
                 socket.emit('roomNotFound'); // Notify the client that the room was not found
+            }
+        });
+
+        socket.on('action', (action) => {
+            // Rate limit: 1000 actions per seconds
+            if (!checkRateLimit(socket.id, 'action', 1000, 5000, this.rateLimits)) {
+                socket.emit('error', 'Rate limit exceeded. Please try again later.');
+                return;
+            }
+
+            const room = this.rooms.find(room => room.players.some(player => player.socketId === socket.id));
+            const socketPlayer = room?.players.find(player => player.socketId === socket.id);
+
+            if (!socketPlayer) {
+                socket.emit('playerNotFound'); // Notify the client that the player was not found
+                return;
+            }
+            if (!room) {
+                socket.emit('roomNotFound'); // Notify the client that the room was not found
+                return;
+            }
+
+            if (socketPlayer.in_cooldown) {
+                return;
+            }
+
+            let actionHasEffect = false;
+            switch (action) {
+                case 'push_up':
+                    room.traffic.forEach(traffic => {
+                        if (traffic.x == socketPlayer.x && traffic.y < socketPlayer.y && Math.abs(traffic.y - socketPlayer.y) == 1) {
+                            traffic.y -= 1;
+                        }
+                    });
+                    room.players.forEach(player => {
+                        if (
+                            player.x == socketPlayer.x &&
+                            player.y < socketPlayer.y &&
+                            Math.abs(player.y - socketPlayer.y) == 1 &&
+                            player.socketId !== socket.id
+                        ) {
+                            player.y -= 1;
+                        }
+                    });
+                    actionHasEffect = true;
+                    break;
+                case 'push_down':
+                    room.traffic.forEach(traffic => {
+                        if (
+                            traffic.x == socketPlayer.x &&
+                            traffic.y > socketPlayer.y &&
+                            Math.abs(traffic.y - socketPlayer.y) == 1
+                        ) {
+                            traffic.y += 1;
+                        }
+                    });
+                    room.players.forEach(player => {
+                        if (player.x == socketPlayer.x && player.y > socketPlayer.y && Math.abs(player.y - socketPlayer.y) == 1 && player.socketId !== socket.id) {
+                            player.y += 1;
+                        }
+                    });
+                    actionHasEffect = true;
+                    break;
+                case 'push_left':
+                    room.traffic.forEach(traffic => {
+                        if (traffic.y == socketPlayer.y && traffic.x < socketPlayer.x && Math.abs(traffic.x - socketPlayer.x) == 1) {
+                            traffic.x -= 1;
+                        }
+                    });
+                    room.players.forEach(player => {
+                        if (player.y == socketPlayer.y && player.x < socketPlayer.x && Math.abs(player.x - socketPlayer.x) == 1 && player.socketId !== socket.id) {
+                            player.x -= 1;
+                        }
+                    });
+                    actionHasEffect = true;
+                    break;
+                case 'push_right':
+                    room.traffic.forEach(traffic => {
+                        if (traffic.y == socketPlayer.y && traffic.x > socketPlayer.x && Math.abs(traffic.x - socketPlayer.x) == 1) {
+                            traffic.x += 1;
+                        }
+                    });
+                    room.players.forEach(player => {
+                        if (player.y == socketPlayer.y && player.x > socketPlayer.x && Math.abs(player.x - socketPlayer.x) == 1 && player.socketId !== socket.id) {
+                            player.x += 1;
+                        }
+                    });
+                    actionHasEffect = true;
+                    break;
+            }
+
+            if (actionHasEffect) {
+                socketPlayer.in_cooldown = true;
+                setTimeout(() => {
+                    socketPlayer.in_cooldown = false;
+                }, 5000); // Cooldown time of 5 seconds
+
+                // Verifica se os player obdecem aos limites do canvas
+                room.players.forEach(player => {
+                    if (player.x > room.canvas.width) {
+                        player.x = room.canvas.width;
+                    }
+                    if (player.x < 0) {
+                        player.x = 0;
+                    }
+                    if (player.y > room.canvas.height) {
+                        player.y = room.canvas.height;
+                    }
+                    if (player.y < 0) {
+                        player.y = 0;
+                    }
+                });
             }
         });
 
