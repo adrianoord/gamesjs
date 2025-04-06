@@ -11,11 +11,11 @@ const io = new Server(server);
 app.use(express.static('public'));
 
 // Fix path traversal vulnerability by using path.join
-app.get('/kart', (req, res) => {
+app.get('kart', (req, res) => {
     res.sendFile(path.join(process.cwd(), 'public', 'kart.html'));
 });
 
-app.get('/pingpong', (req, res) => {
+app.get('pingpong', (req, res) => {
     res.sendFile(path.join(process.cwd(), 'public', 'pingpong.html'));
 });
 
@@ -309,6 +309,6 @@ io.on('connection', (socket) => {
     });
 })
 
-server.listen(3000, () => {
-    console.log('Server is running on http://localhost:3000');
+server.listen(3333, () => {
+    console.log('Server is running on http://localhost:3333');
 });
