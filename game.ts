@@ -79,7 +79,7 @@ export class Game {
                 
                 const traffic = {
                     id: trafficId,
-                    x: Math.floor(Math.random() * (this.canvas.width - 1)),
+                    x: Math.floor(Math.random() * (this.canvas.width)),
                     y: 0,
                     w: 1,
                     h: 1
@@ -88,7 +88,7 @@ export class Game {
                 // Try up to 5 times to place traffic without collision
                 let attempts = 0;
                 while (this.checkCollisionBetweenTraffic(traffic) && attempts < 5) {
-                    traffic.x = Math.floor(Math.random() * (this.canvas.width - 1));
+                    traffic.x = Math.floor(Math.random() * (this.canvas.width));
                     attempts++;
                 }
                 
