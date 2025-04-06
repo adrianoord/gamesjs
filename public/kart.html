@@ -159,8 +159,8 @@
     <div id="lobby-screen">
         <h2>Game Lobby</h2>
         <div>
-            <input type="text" id="room-id" placeholder="Entre com o nome da sala">
-            <input type="text" id="room-init-life" placeholder="Entre com a quantidade de vidas" value="3">
+            <input type="text" id="room-id" placeholder="Entre com o nome da sala" maxlength="20" pattern="[a-zA-Z0-9-_]+" title="Use apenas letras, números, hífens e underscores">
+            <input type="number" id="room-init-life" placeholder="Entre com a quantidade de vidas" value="3" min="1" max="10">
             <button id="create-room">Criar Sala</button>
         </div>
         <h3>Salas disponíveis</h3>
@@ -236,6 +236,46 @@
         let blink = false;
         let gameStarted = false;
         let gameover_audio_flag = false;
+        let errorMessageTimeout = null;
+
+        // Function to sanitize string input to prevent XSS
+        function sanitizeHTML(str) {
+            if (typeof str !== 'string') return '';
+            return str.replace(/[^\w\s-]/gi, '');
+        }
+
+        // Create an error message display function
+        function showErrorMessage(message) {
+            // Clear any existing error message
+            if (errorMessageTimeout) {
+                clearTimeout(errorMessageTimeout);
+            }
+            
+            // Check if error element exists, create if not
+            let errorEl = document.getElementById('error-message');
+            if (!errorEl) {
+                errorEl = document.createElement('div');
+                errorEl.id = 'error-message';
+                errorEl.style.position = 'fixed';
+                errorEl.style.top = '10px';
+                errorEl.style.left = '50%';
+                errorEl.style.transform = 'translateX(-50%)';
+                errorEl.style.backgroundColor = 'rgba(255, 0, 0, 0.8)';
+                errorEl.style.color = 'white';
+                errorEl.style.padding = '10px';
+                errorEl.style.borderRadius = '5px';
+                errorEl.style.zIndex = '1000';
+                document.body.appendChild(errorEl);
+            }
+            
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+            
+            // Hide after 3 seconds
+            errorMessageTimeout = setTimeout(() => {
+                errorEl.style.display = 'none';
+            }, 3000);
+        }
 
         // Socket event listeners
         socket.on('connect', () => {
@@ -248,12 +288,12 @@
         });
 
         socket.on('roomCreated', (roomId) => {
-            selectedRoom = roomId;
-            showColorSelection(roomId);
+            selectedRoom = sanitizeHTML(roomId);
+            showColorSelection(selectedRoom);
         });
 
         socket.on('roomExists', (roomId) => {
-            alert(`Room "${roomId}" already exists. Please choose a different name.`);
+            showErrorMessage(`Sala "${sanitizeHTML(roomId)}" já existe. Por favor, escolha outro nome.`);
         });
 
         socket.on('roomJoined', (roomId, player) => {
@@ -263,18 +303,22 @@
         });
 
         socket.on('roomNotFound', (roomId) => {
-            alert(`Room "${roomId}" not found.`);
+            showErrorMessage(`Sala "${sanitizeHTML(roomId)}" não encontrada.`);
             showLobbyScreen();
         });
 
         socket.on('roomFull', (roomId) => {
-            alert(`Room "${roomId}" is full.`);
+            showErrorMessage(`Sala "${sanitizeHTML(roomId)}" está cheia.`);
             showLobbyScreen();
         });
 
         socket.on('colorTaken', (color) => {
-            alert(`Color "${color}" is already taken. Please choose a different color.`);
+            showErrorMessage(`Cor "${sanitizeHTML(color)}" já está em uso. Por favor, escolha outra cor.`);
             enableAllColorOptions();
+        });
+
+        socket.on('error', (message) => {
+            showErrorMessage(sanitizeHTML(message));
         });
 
         socket.on('gameState', (state) => {
@@ -334,12 +378,19 @@
         createRoomButton.addEventListener('click', () => {
             const roomId = roomIdInput.value.trim();
             if (!roomId) {
-                alert('Por favor, insira um nome para a sala');
+                showErrorMessage('Por favor, insira um nome para a sala');
                 return;
             }
+            
+            // Client-side validation for room ID
+            if (!/^[a-zA-Z0-9-_]{3,20}$/.test(roomId)) {
+                showErrorMessage('O nome da sala deve ter entre 3 e 20 caracteres e conter apenas letras, números, hífens e underscores.');
+                return;
+            }
+            
             const roomInitLife = parseInt(roomInitLifeInput.value.trim());
-            if (isNaN(roomInitLife) || roomInitLife <= 0) {
-                alert('Por favor, insira um número válido para a quantidade de vidas');
+            if (isNaN(roomInitLife) || roomInitLife <= 0 || roomInitLife > 10) {
+                showErrorMessage('Por favor, insira um número válido para a quantidade de vidas (1-10)');
                 return;
             }
             socket.emit('createRoom', roomId, roomInitLife);
@@ -397,12 +448,13 @@
             roomListContainer.innerHTML = '';
             
             rooms.forEach(roomId => {
+                const sanitizedRoomId = sanitizeHTML(roomId);
                 const roomElement = document.createElement('div');
                 roomElement.className = 'room-item';
-                roomElement.textContent = roomId;
+                roomElement.textContent = sanitizedRoomId;
                 roomElement.addEventListener('click', () => {
-                    selectedRoom = roomId;
-                    showColorSelection(roomId);
+                    selectedRoom = sanitizedRoomId;
+                    showColorSelection(sanitizedRoomId);
                 });
                 roomListContainer.appendChild(roomElement);
             });
@@ -422,7 +474,7 @@
             lobbyScreen.style.display = 'none';
             colorSelection.style.display = 'block';
             gameScreen.style.display = 'none';
-            selectedRoomElement.textContent = roomId;
+            selectedRoomElement.textContent = sanitizeHTML(roomId);
             enableAllColorOptions();
         }
 
