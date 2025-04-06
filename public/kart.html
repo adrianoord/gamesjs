@@ -224,7 +224,37 @@
     </div>
 
     <script type="text/javascript">
-        const socket = io(window.location.origin, { transports: ['websocket'] });
+        // Replace the direct socket connection with a Manager
+        const manager = new io.Manager(window.location.origin, { 
+            transports: ['websocket'],
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            reconnectionAttempts: 5
+        });
+        
+        // Get socket from manager
+        const socket = manager.socket('/kart'); // Main namespace
+        
+        // Log connection events from manager
+        manager.on('reconnect_attempt', () => {
+            console.log('Attempting to reconnect...');
+        });
+        
+        manager.on('reconnect', () => {
+            console.log('Reconnected to server');
+            refreshRoomList();
+        });
+        
+        manager.on('reconnect_error', (error) => {
+            console.log('Reconnection error:', error);
+            showErrorMessage('Conexão perdida. Tentando reconectar...');
+        });
+        
+        manager.on('reconnect_failed', () => {
+            console.log('Failed to reconnect');
+            showErrorMessage('Não foi possível reconectar. Por favor, recarregue a página.');
+        });
+
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
 
