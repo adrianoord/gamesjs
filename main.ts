@@ -293,6 +293,7 @@ io.on('connection', (socket) => {
             // Remove the player from the room
             const playerIndex = room.players.findIndex(player => player.socketId === socket.id);
             if (playerIndex !== -1) {
+                socket.leave(room.roomId); // Leave the room
                 room.players.splice(playerIndex, 1);
                 // If there are no more players, remove the room
                 if (room.players.length === 0) {

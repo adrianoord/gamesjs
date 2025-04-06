@@ -25,7 +25,8 @@
             image-rendering: -moz-crisp-edges;
             width: 500px;
             height: 666px;
-            display: none; /* Hidden initially */
+            display: none;
+            /* Hidden initially */
         }
 
         .hud {
@@ -36,7 +37,8 @@
             padding: 10px;
             border-radius: 5px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-            display: none; /* Hidden initially */
+            display: none;
+            /* Hidden initially */
         }
 
         .player-info {
@@ -48,6 +50,22 @@
         .player-info h2 {
             margin: 0;
             font-size: 20px;
+        }
+        
+        .volume-control {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .volume-control label {
+            margin-right: 10px;
+            font-size: 14px;
+        }
+        
+        .volume-control input {
+            width: 100px;
+            margin: 0;
         }
 
         #lobby-screen {
@@ -89,7 +107,8 @@
             background-color: #f9f9f9;
         }
 
-        input, button {
+        input,
+        button {
             padding: 10px;
             margin: 10px 0;
             width: 100%;
@@ -140,7 +159,8 @@
             display: none;
         }
 
-        #restart-button, #start-game-button {
+        #restart-button,
+        #start-game-button {
             margin-top: 10px;
             background-color: #f44336;
             display: none;
@@ -152,15 +172,18 @@
     </style>
     <script src="socket.io/socket.io.js"></script>
 </head>
+
 <body>
     <h1>Kart Game</h1>
-    
+
     <!-- Lobby Screen -->
     <div id="lobby-screen">
         <h2>Game Lobby</h2>
         <div>
-            <input type="text" id="room-id" placeholder="Entre com o nome da sala" maxlength="20" pattern="[a-zA-Z0-9-_]+" title="Use apenas letras, números, hífens e underscores">
-            <input type="number" id="room-init-life" placeholder="Entre com a quantidade de vidas" value="3" min="1" max="10">
+            <input type="text" id="room-id" placeholder="Entre com o nome da sala" maxlength="20"
+                pattern="[a-zA-Z0-9-_]+" title="Use apenas letras, números, hífens e underscores">
+            <input type="number" id="room-init-life" placeholder="Entre com a quantidade de vidas" value="3" min="1"
+                max="10">
             <button id="create-room">Criar Sala</button>
         </div>
         <h3>Salas disponíveis</h3>
@@ -188,6 +211,10 @@
         <div class="hud">
             <div class="player-info" id="player-info">
                 <p>Life: <span id="player-life">0</span></p>
+            </div>
+            <div class="volume-control">
+                <label for="volume">Volume:</label>
+                <input type="range" id="volume" name="volume" min="0" max="1" step="0.1" value="1">
             </div>
         </div>
         <canvas id="canvas" width="15" height="10"></canvas>
@@ -218,12 +245,12 @@
         const joinRoomButton = document.getElementById('join-room');
         const backToLobbyButton = document.getElementById('back-to-lobby');
         const leaveGameButton = document.getElementById('leave-game');
-        
+
         //Lobby screen elements
         const roomIdInput = document.getElementById('room-id');
         const roomInitLifeInput = document.getElementById('room-init-life');
         const createRoomButton = document.getElementById('create-room');
-        
+
         const colorOptions = document.querySelectorAll('.color-option');
         const hud = document.querySelector('.hud');
         const startGameButton = document.getElementById('start-game-button');
@@ -250,7 +277,7 @@
             if (errorMessageTimeout) {
                 clearTimeout(errorMessageTimeout);
             }
-            
+
             // Check if error element exists, create if not
             let errorEl = document.getElementById('error-message');
             if (!errorEl) {
@@ -267,10 +294,10 @@
                 errorEl.style.zIndex = '1000';
                 document.body.appendChild(errorEl);
             }
-            
+
             errorEl.textContent = message;
             errorEl.style.display = 'block';
-            
+
             // Hide after 3 seconds
             errorMessageTimeout = setTimeout(() => {
                 errorEl.style.display = 'none';
@@ -323,13 +350,13 @@
 
         socket.on('gameState', (state) => {
             gameState = state;
-            
+
             // Check if game has started
             if (state.gameStarted && !gameStarted) {
                 gameStarted = true;
                 startGameButton.style.display = 'none';
             }
-            
+
             // Check if all players are dead
             let allPlayersDead = true;
             state.players.forEach(player => {
@@ -347,7 +374,7 @@
                     }
                 }
             });
-            
+
             if (allPlayersDead && state.players.length > 0) {
                 restartButton.style.display = 'block';
             } else {
@@ -359,6 +386,7 @@
         socket.on('gameStarted', () => {
             gameStarted = true;
             audio_countdown.play();
+            startGameButton.style.display = 'none';
             setTimeout(() => {
                 socket.emit('changeGameState', { gameStarted: true });
                 // audio_car_engine.loop = true;
@@ -381,13 +409,13 @@
                 showErrorMessage('Por favor, insira um nome para a sala');
                 return;
             }
-            
+
             // Client-side validation for room ID
             if (!/^[a-zA-Z0-9-_]{3,20}$/.test(roomId)) {
                 showErrorMessage('O nome da sala deve ter entre 3 e 20 caracteres e conter apenas letras, números, hífens e underscores.');
                 return;
             }
-            
+
             const roomInitLife = parseInt(roomInitLifeInput.value.trim());
             if (isNaN(roomInitLife) || roomInitLife <= 0 || roomInitLife > 10) {
                 showErrorMessage('Por favor, insira um número válido para a quantidade de vidas (1-10)');
@@ -446,7 +474,7 @@
 
             noRoomsMessage.style.display = 'none';
             roomListContainer.innerHTML = '';
-            
+
             rooms.forEach(roomId => {
                 const sanitizedRoomId = sanitizeHTML(roomId);
                 const roomElement = document.createElement('div');
@@ -506,15 +534,15 @@
 
         function renderGame() {
             if (!gameState) return;
-            
+
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             // Draw players
             gameState.players.forEach(player => {
                 // Update current player info
                 if (player.socketId === socket.id) {
-                        player_life.textContent = player.life;
-                    }
+                    player_life.textContent = player.life;
+                }
                 if (player.life > 0) {
                     if (player.invulnerable) {
                         blink ? ctx.fillStyle = 'white' : ctx.fillStyle = player.color;
@@ -536,10 +564,58 @@
         // Listen for keyboard input for the game
         document.addEventListener('keydown', (event) => {
             if (currentPlayer && gameState && gameState.gameStarted) {
-                if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
-                    socket.emit('move', event.key);
+                // Support for WASD and Arrow keys
+                if (['w', 'a', 's', 'd', 'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'].includes(event.key)) {
+                    event.preventDefault(); // Prevent default scrolling behavior
+                }
+                // Translate WASD to Arrow keys
+                if (event.key === 'w') {
+                    socket.emit('move', 'ArrowUp');
+                } else if (event.key === 'a') {
+                    socket.emit('move', 'ArrowLeft');
+                } else if (event.key === 's') {
+                    socket.emit('move', 'ArrowDown');
+                } else if (event.key === 'd') {
+                    socket.emit('move', 'ArrowRight');
+                } else {
+                    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+                        socket.emit('move', event.key);
+                    }
                 }
             }
+        });
+
+        // Volume control functionality
+        const volumeSlider = document.getElementById('volume');
+        
+        // Function to update all audio volumes
+        function updateVolume(value) {
+            const audioElements = [
+                audio_countdown,
+                audio_gameover,
+                //audio_car_crash,
+                audio_car_engine
+            ];
+            
+            audioElements.forEach(audio => {
+                if (audio) audio.volume = value;
+            });
+            
+            // Save volume preference in localStorage
+            localStorage.setItem('gameVolume', value);
+        }
+        
+        // Initialize volume from localStorage or default to 1
+        const savedVolume = localStorage.getItem('gameVolume');
+        if (savedVolume !== null) {
+            volumeSlider.value = savedVolume;
+            updateVolume(parseFloat(savedVolume));
+        }
+        
+        // Listen for volume changes
+        volumeSlider.addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            updateVolume(value);
         });
 
         // Start in the lobby
