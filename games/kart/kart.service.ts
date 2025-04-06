@@ -115,7 +115,7 @@ export class KartService {
                 }
                 room.players.push(player);
                 socket.join(roomId);
-                socket.emit('roomJoined', roomId, player);
+                socket.emit('roomJoined', room, player);
             } else {
                 socket.emit('roomNotFound', roomId); // Notify the client that the room was not found
             }

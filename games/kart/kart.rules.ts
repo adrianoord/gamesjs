@@ -13,7 +13,7 @@ export class GameKart {
     speed_timer = 1 // timer for speed increase seconds incrise 0.1 every 1 second
     speed_increase = 0.1 // increase speed every second
     speed_increase_timer = this.getTime() // timer for speed increase
-    traffic_density = 0.8 // 10% chance to spawn traffic each frame
+    traffic_density = 0.0 // 10% chance to spawn traffic each frame
     last_move = this.getTime() // last time the game was updated
     roomId = '' // id of the room
     gameStarted = false // indicates if the game has started

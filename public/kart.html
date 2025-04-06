@@ -51,18 +51,18 @@
             margin: 0;
             font-size: 20px;
         }
-        
+
         .volume-control {
             margin-top: 10px;
             display: flex;
             align-items: center;
         }
-        
+
         .volume-control label {
             margin-right: 10px;
             font-size: 14px;
         }
-        
+
         .volume-control input {
             width: 100px;
             margin: 0;
@@ -202,7 +202,7 @@
             <div class="color-option" style="background-color: green;" data-color="green"></div>
             <div class="color-option" style="background-color: yellow;" data-color="yellow"></div>
             <div class="color-option" style="background-color: purple;" data-color="purple"></div>
-            <div class="color-option" style="background-color: orange;" data-color="orange"></div>    
+            <div class="color-option" style="background-color: orange;" data-color="orange"></div>
         </div>
         <button id="join-room" disabled>Entrar no jogo</button>
         <button id="back-to-lobby">Voltar para o Lobby</button>
@@ -229,31 +229,31 @@
 
     <script type="text/javascript">
         // Replace the direct socket connection with a Manager
-        const manager = new io.Manager(window.location.origin, { 
+        const manager = new io.Manager(window.location.origin, {
             transports: ['websocket'],
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
             reconnectionAttempts: 5
         });
-        
+
         // Get socket from manager
         const socket = manager.socket('/kart'); // Main namespace
-        
+
         // Log connection events from manager
         manager.on('reconnect_attempt', () => {
             console.log('Attempting to reconnect...');
         });
-        
+
         manager.on('reconnect', () => {
             console.log('Reconnected to server');
             refreshRoomList();
         });
-        
+
         manager.on('reconnect_error', (error) => {
             console.log('Reconnection error:', error);
             showErrorMessage('Conexão perdida. Tentando reconectar...');
         });
-        
+
         manager.on('reconnect_failed', () => {
             console.log('Failed to reconnect');
             showErrorMessage('Não foi possível reconectar. Por favor, recarregue a página.');
@@ -358,10 +358,16 @@
             showErrorMessage(`Sala "${sanitizeHTML(roomId)}" já existe. Por favor, escolha outro nome.`);
         });
 
-        socket.on('roomJoined', (roomId, player) => {
+        socket.on('roomJoined', (room, player) => {
+            console.log('Room joined:', room);
             currentPlayer = player;
             player_life.textContent = player.life;
+            gameState = room;
+            gameStarted = room.gameStarted;
             showGameScreen();
+            if (gameStarted) {
+                socket.emit('getGameState');
+            }
         });
 
         socket.on('roomNotFound', (roomId) => {
@@ -396,7 +402,6 @@
                 if (player.socketId === socket.id) {
                     player_life.textContent = player.life;
                     player_skill.textContent = player.in_cooldown ? 'Empurrão em cooldown' : 'Empurrão disponível';
-                    console.log("Cooldown:", player.in_cooldown);
                 }
             });
 
@@ -450,6 +455,7 @@
         });
 
         socket.on('gameRestarted', () => {
+            gameStarted = true;
             audio_countdown.play();
             setTimeout(() => {
                 socket.emit('changeGameState', { gameStarted: true });
@@ -568,7 +574,6 @@
             hud.style.display = 'block';
             startGameButton.style.display = 'block';
             restartButton.style.display = 'none';
-            gameStarted = false;
         }
 
         function enableAllColorOptions() {
@@ -580,14 +585,22 @@
             selectedColor = '';
         }
 
-        setInterval(() => {
-            if (gameStarted) {
-                renderGame();
-            }
-        }, 1000 / 60); // 60 FPS
+        renderGame();
 
         function renderGame() {
-            if (!gameState) return;
+            if (!gameState) {
+                setTimeout(() => {
+                    if (gameStarted) {
+                        startGameButton.style.display = 'none';
+                        restartButton.style.display = 'none';
+                        requestAnimationFrame(renderGame);
+                    } else {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        requestAnimationFrame(renderGame);
+                    }
+                }, 1000 / 60); // 60 FPS
+                return;
+            };
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -609,6 +622,17 @@
                 ctx.fillStyle = 'black';
                 ctx.fillRect(traffic.x, traffic.y, traffic.w, traffic.h);
             });
+
+            setTimeout(() => {
+                if (gameStarted) {
+                    startGameButton.style.display = 'none';
+                    restartButton.style.display = 'none';
+                    requestAnimationFrame(renderGame);
+                } else {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    requestAnimationFrame(renderGame);
+                }
+            }, 1000 / 60); // 60 FPS
         }
 
         keyPressed = {};
@@ -655,7 +679,7 @@
 
         // Volume control functionality
         const volumeSlider = document.getElementById('volume');
-        
+
         // Function to update all audio volumes
         function updateVolume(value) {
             const audioElements = [
@@ -664,22 +688,22 @@
                 //audio_car_crash,
                 audio_car_engine
             ];
-            
+
             audioElements.forEach(audio => {
                 if (audio) audio.volume = value;
             });
-            
+
             // Save volume preference in localStorage
             localStorage.setItem('gameVolume', value);
         }
-        
+
         // Initialize volume from localStorage or default to 1
         const savedVolume = localStorage.getItem('gameVolume');
         if (savedVolume !== null) {
             volumeSlider.value = savedVolume;
             updateVolume(parseFloat(savedVolume));
         }
-        
+
         // Listen for volume changes
         volumeSlider.addEventListener('input', (e) => {
             const value = parseFloat(e.target.value);
