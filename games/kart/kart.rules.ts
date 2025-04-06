@@ -1,6 +1,6 @@
-import { IPlayer, ITraffic } from "./models"
+import { IPlayer, ITraffic } from "../../models"
 
-export class Game {
+export class GameKart {
     canvas = {
         width: 15,
         height: 10
@@ -49,7 +49,7 @@ export class Game {
             this.last_move = this.getTime();
 
             // Using arrow function to preserve 'this' context
-            const moveDown = (game: Game) => {
+            const moveDown = (game: GameKart) => {
                 for (const traffic of game.traffic) {
                     traffic.y += 1;
                     if (traffic.y > game.canvas.height) {

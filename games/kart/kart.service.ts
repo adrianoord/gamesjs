@@ -1,10 +1,10 @@
 import { Server, Socket } from "socket.io";
-import { Game } from "../../game";
+import { GameKart } from "./kart.rules";
 import { checkRateLimit, isValidRoomId, isValidColor } from "../../shared/utils"; // Import the rate limit function
 
 export class KartService {
     path_socket: string;
-    rooms: Game[];
+    rooms: GameKart[];
     rateLimits: { [socketId: string]: { [event: string]: number[] } }; // Rate limit tracking
 
     constructor() {
@@ -45,7 +45,7 @@ export class KartService {
                 socket.emit('roomExists', roomId); // Notify the client that the room already exists
                 return;
             }
-            const room: Game = new Game(roomId);
+            const room: GameKart = new GameKart(roomId);
 
             // Set initial life if provided
             if (initLife !== undefined) {
@@ -55,6 +55,7 @@ export class KartService {
             this.rooms.push(room);
             socket.join(roomId);
             socket.emit('roomCreated', roomId);
+            io.emit('rooms', this.rooms.map(room => room.roomId)); // Emit the list of rooms to the client
         });
 
         socket.on('joinRoom', (roomId, color) => {
@@ -128,7 +129,17 @@ export class KartService {
             const room = this.rooms.find(room => room.players.some(player => player.socketId === socket.id));
             if (room) {
                 socket.compress(true).emit('gameState', {
-                    players: room.players,
+                    players: room.players.map(player => {
+                        return {
+                            life: player.life,
+                            invulnerable: player.invulnerable,
+                            x: player.x,
+                            y: player.y,
+                            w: player.w,
+                            h: player.h,
+                            color: player.color
+                        };
+                    }),
                     traffic: room.traffic,
                     gameStarted: room.gameStarted
                 }); // Send the game state to the client

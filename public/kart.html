@@ -209,6 +209,7 @@
     <!-- Game Screen -->
     <div id="game-screen" class="game-container">
         <div class="hud">
+            <div class="players-list"></div>
             <div class="player-info" id="player-info">
                 <p>Life: <span id="player-life">0</span></p>
             </div>
@@ -410,6 +411,17 @@
             } else {
                 restartButton.style.display = 'none';
             }
+
+            // Update players list, com a vida e cor
+            const playersList = document.querySelector('.players-list');
+            playersList.innerHTML = ''; // Clear previous list
+            gameState.players.forEach(player => {
+                const playerDiv = document.createElement('div');
+                playerDiv.className = 'player-info';
+                playerDiv.textContent = `Jogador: ${sanitizeHTML(player.color)} - Vida: ${player.life}`;
+                playersList.appendChild(playerDiv);
+            });
+
             setTimeout(() => socket.emit('getGameState'), 1000 / 60); // Request game state every frame
         });
 

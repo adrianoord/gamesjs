@@ -1,9 +1,8 @@
 import express from 'express';
 import { Server } from 'socket.io';
 import { createServer } from 'http';
-import { Game } from './game';
 import path from 'path';
-import { KartService } from './games/kart/socket';
+import { KartService } from './games/kart/kart.service';
 
 const app = express();
 const server = createServer(app);
