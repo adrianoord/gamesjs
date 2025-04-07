@@ -168,6 +168,7 @@ export class KartService {
                     room.traffic.forEach(traffic => {
                         if (traffic.x == socketPlayer.x && traffic.y < socketPlayer.y && Math.abs(traffic.y - socketPlayer.y) == 1) {
                             traffic.y -= 1;
+                            actionHasEffect = true;
                         }
                     });
                     room.players.forEach(player => {
@@ -178,9 +179,9 @@ export class KartService {
                             player.socketId !== socket.id
                         ) {
                             player.y -= 1;
+                            actionHasEffect = true;
                         }
                     });
-                    actionHasEffect = true;
                     break;
                 case 'push_down':
                     room.traffic.forEach(traffic => {
@@ -190,40 +191,43 @@ export class KartService {
                             Math.abs(traffic.y - socketPlayer.y) == 1
                         ) {
                             traffic.y += 1;
+                            actionHasEffect = true;
                         }
                     });
                     room.players.forEach(player => {
                         if (player.x == socketPlayer.x && player.y > socketPlayer.y && Math.abs(player.y - socketPlayer.y) == 1 && player.socketId !== socket.id) {
                             player.y += 1;
+                            actionHasEffect = true;
                         }
                     });
-                    actionHasEffect = true;
                     break;
                 case 'push_left':
                     room.traffic.forEach(traffic => {
                         if (traffic.y == socketPlayer.y && traffic.x < socketPlayer.x && Math.abs(traffic.x - socketPlayer.x) == 1) {
                             traffic.x -= 1;
+                            actionHasEffect = true;
                         }
                     });
                     room.players.forEach(player => {
                         if (player.y == socketPlayer.y && player.x < socketPlayer.x && Math.abs(player.x - socketPlayer.x) == 1 && player.socketId !== socket.id) {
                             player.x -= 1;
+                            actionHasEffect = true;
                         }
                     });
-                    actionHasEffect = true;
                     break;
                 case 'push_right':
                     room.traffic.forEach(traffic => {
                         if (traffic.y == socketPlayer.y && traffic.x > socketPlayer.x && Math.abs(traffic.x - socketPlayer.x) == 1) {
                             traffic.x += 1;
+                            actionHasEffect = true;
                         }
                     });
                     room.players.forEach(player => {
                         if (player.y == socketPlayer.y && player.x > socketPlayer.x && Math.abs(player.x - socketPlayer.x) == 1 && player.socketId !== socket.id) {
                             player.x += 1;
+                            actionHasEffect = true;
                         }
                     });
-                    actionHasEffect = true;
                     break;
             }
 
