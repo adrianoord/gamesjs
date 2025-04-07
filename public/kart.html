@@ -221,7 +221,7 @@
                 <input type="range" id="volume" name="volume" min="0" max="1" step="0.1" value="1">
             </div>
         </div>
-        <canvas id="canvas" width="15" height="10"></canvas>
+        <canvas id="canvas" width="700" height="700"></canvas>
         <button id="start-game-button">Start</button>
         <button id="restart-button">Restart</button>
         <button id="leave-game">Sair da sala</button>
@@ -262,10 +262,65 @@
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
 
+        // Audio elements
         const audio_countdown = new Audio('assets/countdown.mp3');
         const audio_gameover = new Audio('assets/gameover.mp3');
         //const audio_car_crash = new Audio('assets/carcrash.mp3');
         const audio_car_engine = new Audio('assets/carengine.mp3');
+
+        // Sprites elements
+
+        const cars = [
+            {
+                color: 'red',
+                src: 'assets/pitstop_car_1.png',
+                loaded: false
+            },
+            {
+                color: 'blue',
+                src: 'assets/pitstop_car_4.png',
+                loaded: false
+            },
+            {
+                color: 'green',
+                src: 'assets/pitstop_car_9.png',
+                loaded: false
+            },
+            {
+                color: 'yellow',
+                src: 'assets/pitstop_car_5.png',
+                loaded: false
+            },
+            {
+                color: 'purple',
+                src: 'assets/pitstop_car_13.png',
+                loaded: false
+            },
+            {
+                color: 'orange',
+                src: 'assets/pitstop_car_10.png',
+                loaded: false
+            },
+            {
+                color: 'traffic',
+                src: 'assets/pitstop_car_3.png',
+                loaded: false
+            }
+        ]
+
+        let count = 0
+        for (const car of cars) {
+            car.image = new Image();
+            car.image.src = car.src;
+            car.width = 35;
+            car.height = 70;
+
+            car.image.onload = () => {
+                car.loaded = true;
+                console.log(`Carro ${car.color} carregado`);
+                count++;
+            };
+        }
 
         const player_life = document.getElementById('player-life');
         const player_skill = document.querySelector('.player-skill');
@@ -424,6 +479,8 @@
             });
 
             if (allPlayersDead && state.players.length > 0) {
+                gameStarted = false;
+                socket.emit('changeGameState', { gameStarted: false });
                 restartButton.style.display = 'block';
             } else {
                 restartButton.style.display = 'none';
@@ -450,8 +507,8 @@
                 socket.emit('changeGameState', { gameStarted: true });
                 // audio_car_engine.loop = true;
                 // audio_car_engine.play();
+                socket.emit('getGameState');
             }, audio_countdown.duration * 1000);
-            socket.emit('getGameState')
         });
 
         socket.on('gameRestarted', () => {
@@ -588,7 +645,8 @@
         renderGame();
 
         function renderGame() {
-            if (!gameState) {
+            const allCarsLoaded = cars.every(car => car.loaded);
+            if (!gameState || !allCarsLoaded) {
                 setTimeout(() => {
                     if (gameStarted) {
                         startGameButton.style.display = 'none';
@@ -607,20 +665,49 @@
             // Draw players
             gameState.players.forEach(player => {
                 if (player.life > 0) {
+                    // Escolher o sprite correto com base na cor do jogador
+                    let carSprite;
+                    switch (player.color) {
+                        case 'red':
+                            carSprite = cars[0].image;
+                            break;
+                        case 'blue':
+                            carSprite = cars[1].image;
+                            break;
+                        case 'green':
+                            carSprite = cars[2].image;
+                            break;
+                        case 'yellow':
+                            carSprite = cars[3].image;
+                            break;
+                        case 'purple':
+                            carSprite = cars[4].image;
+                            break;
+                        case 'orange':
+                            carSprite = cars[5].image;
+                            break;
+                    }
+
                     if (player.invulnerable) {
-                        blink ? ctx.fillStyle = 'white' : ctx.fillStyle = player.color;
+                        // Efeito de piscar enquanto invulnerável
+                        if (blink) {
+                            ctx.globalAlpha = 0.5;
+                        }
                         blink = !blink; // Toggle blink state
                     } else {
-                        ctx.fillStyle = player.color;
+                        ctx.globalAlpha = 1.0;
                     }
-                    ctx.fillRect(player.x, player.y, player.w, player.h);
+
+                    // Desenhar o sprite no lugar do retângulo
+                    ctx.drawImage(carSprite, player.x*35, player.y*70, 35, 70);
+                    ctx.globalAlpha = 1.0; // Restaurar alpha
                 }
             });
 
             // Draw traffic
             gameState.traffic.forEach(traffic => {
-                ctx.fillStyle = 'black';
-                ctx.fillRect(traffic.x, traffic.y, traffic.w, traffic.h);
+                // Usar o sprite de tráfego
+                ctx.drawImage(cars[6].image, traffic.x*35, traffic.y*70, 35, 70);
             });
 
             setTimeout(() => {

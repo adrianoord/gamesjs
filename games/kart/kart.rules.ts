@@ -2,7 +2,7 @@ import { IPlayer, ITraffic } from "../../models"
 
 export class GameKart {
     canvas = {
-        width: 15,
+        width: 20,
         height: 10
     }
 

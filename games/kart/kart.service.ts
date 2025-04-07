@@ -1,6 +1,6 @@
 import { Server, Socket } from "socket.io";
 import { GameKart } from "./kart.rules";
-import { checkRateLimit, isValidRoomId, isValidColor } from "../../shared/utils"; // Import the rate limit function
+import { isValidRoomId, isValidColor } from "../../shared/utils"; // Import the rate limit function
 import { IPlayer } from "../../models";
 
 export class KartService {
@@ -19,12 +19,6 @@ export class KartService {
         io.emit('rooms', this.rooms.map(room => room.roomId)); // Emit the list of rooms to the client
 
         socket.on('createRoom', (roomId, initLife) => {
-            // Rate limit: 5 room creations per minute
-            if (!checkRateLimit(socket.id, 'createRoom', 5, 60000, this.rateLimits)) {
-                socket.emit('error', 'Rate limit exceeded. Please try again later.');
-                return;
-            }
-
             // Validate room ID
             if (!isValidRoomId(roomId)) {
                 socket.emit('error', 'Invalid room ID. Use 3-20 alphanumeric characters, hyphens, or underscores.');
@@ -60,12 +54,6 @@ export class KartService {
         });
 
         socket.on('joinRoom', (roomId, color) => {
-            // Rate limit: 10 join attempts per minute
-            if (!checkRateLimit(socket.id, 'joinRoom', 10, 60000, this.rateLimits)) {
-                socket.emit('error', 'Rate limit exceeded. Please try again later.');
-                return;
-            }
-
             // Validate room ID
             if (!isValidRoomId(roomId)) {
                 socket.emit('error', 'Invalid room ID format.');
@@ -122,11 +110,6 @@ export class KartService {
         });
 
         socket.on('getGameState', () => {
-            // Rate limit: 120 requests per second (to accommodate 60 FPS with some buffer)
-            if (!checkRateLimit(socket.id, 'getGameState', 120, 1000, this.rateLimits)) {
-                return; // Silently drop excessive requests
-            }
-
             const room = this.rooms.find(room => room.players.some(player => player.socketId === socket.id));
             if (room) {
                 socket.compress(true).emit('gameState', {
@@ -140,12 +123,6 @@ export class KartService {
         });
 
         socket.on('action', (action) => {
-            // Rate limit: 1000 actions per seconds
-            if (!checkRateLimit(socket.id, 'action', 1000, 5000, this.rateLimits)) {
-                socket.emit('error', 'Rate limit exceeded. Please try again later.');
-                return;
-            }
-
             const room = this.rooms.find(room => room.players.some(player => player.socketId === socket.id));
             const socketPlayer = room?.players.find(player => player.socketId === socket.id);
 
@@ -256,11 +233,6 @@ export class KartService {
         });
 
         socket.on('move', (key) => {
-            // Rate limit: 20 moves per second
-            if (!checkRateLimit(socket.id, 'move', 20, 1000, this.rateLimits)) {
-                return; // Silently drop excessive requests
-            }
-
             // Validate key
             const validKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
             if (!validKeys.includes(key)) {
@@ -299,12 +271,6 @@ export class KartService {
         });
 
         socket.on('restartGame', () => {
-            // Rate limit: 5 restarts per minute
-            if (!checkRateLimit(socket.id, 'restartGame', 5, 60000, this.rateLimits)) {
-                socket.emit('error', 'Rate limit exceeded. Please try again later.');
-                return;
-            }
-
             const room = this.rooms.find(room => room.players.some(player => player.socketId === socket.id));
             if (room) {
                 // Reset player lives and positions
@@ -326,12 +292,6 @@ export class KartService {
         });
 
         socket.on('startGame', () => {
-            // Rate limit: 5 starts per minute
-            if (!checkRateLimit(socket.id, 'startGame', 5, 60000, this.rateLimits)) {
-                socket.emit('error', 'Rate limit exceeded. Please try again later.');
-                return;
-            }
-
             const room = this.rooms.find(room => room.players.some(player => player.socketId === socket.id));
             if (room) {
                 io.to(room.roomId).emit('gameStarted');
@@ -339,12 +299,6 @@ export class KartService {
         });
 
         socket.on('changeGameState', (data: { gameStarted: boolean }) => {
-            // Rate limit: 10 state changes per minute
-            if (!checkRateLimit(socket.id, 'changeGameState', 10, 60000, this.rateLimits)) {
-                socket.emit('error', 'Rate limit exceeded. Please try again later.');
-                return;
-            }
-
             // Validate data
             if (typeof data !== 'object' || data === null || typeof data.gameStarted !== 'boolean') {
                 socket.emit('error', 'Invalid game state data');
