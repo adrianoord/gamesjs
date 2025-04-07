@@ -12,10 +12,8 @@ Projeto para criar jogos com Node.js, Express e Socket.IO.
 ## Funcionalidades
 
 - Criação e gerenciamento de salas de jogo
-- Suporte para até 4 jogadores por sala
+- Suporte pelo menos até 6 jogadores por sala
 - Sistema de cores para diferenciar os jogadores
-- Detecção de colisão
-- Sistema de vidas e invulnerabilidade temporária
 - Controle do estado do jogo (iniciar, reiniciar, pausar)
 
 ## Como Executar
@@ -34,20 +32,21 @@ Projeto para criar jogos com Node.js, Express e Socket.IO.
    ```
    npm start
    ```
-6. Acesse o jogo em um navegador: http://localhost:3000
+5.1 Ou inicie o servidor com ts-node:
+   ```
+   ts-node main.ts
+   ```
+
+6. Acesse o jogo em um navegador: http://localhost:3333
 
 ## Estrutura do Projeto
 
-- `main.ts` - Ponto de entrada da aplicação, configuração do servidor e lógica de comunicação Socket.IO
-- `game.ts` - Classe principal do jogo, contendo a lógica do jogo
+- `main.ts` - Ponto de entrada da aplicação, configuração do servidor e criação dos namespaces de comunicação Socket.IO
+- `games/` - Pastas dos jogos, contendo o serviço e regras do jogo Ex:
+ `games/kart`
+     `kart.rules.ts`
+     `kart.service.ts`
 - `public/` - Arquivos estáticos (HTML, CSS, JavaScript do cliente)
-
-## Comandos de Jogo
-
-- Crie uma sala inserindo um ID único
-- Entre em uma sala existente escolhendo uma cor disponível
-- Use as teclas direcionais para mover seu personagem
-- Evite colisões com outros jogadores e obstáculos
 
 ## Contribuições
 
